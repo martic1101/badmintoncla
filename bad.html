@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>羽球分隊器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --court:#1F5D44;
+    --court-deep:#164534;
+    --line:#F4F6F0;
+    --paper:#F4F6F0;
+    --ink:#22322B;
+    --shuttle:#E9C63F;
+    --muted:#6C7F76;
+    --card:#FFFFFF;
+    --danger:#B4513C;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Noto Sans TC',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.55;
+  }
+  header{
+    background:var(--court);
+    color:var(--line);
+    padding:20px 24px 22px;
+    border-bottom:6px double var(--line);
+  }
+  header h1{font-weight:900;font-size:1.7rem;letter-spacing:.08em}
+  header p{opacity:.85;font-size:.9rem;margin-top:2px}
+  main{max-width:1080px;margin:0 auto;padding:20px 16px 60px;display:grid;grid-template-columns:340px 1fr;gap:20px}
+  @media(max-width:860px){main{grid-template-columns:1fr}}
+
+  .panel{background:var(--card);border:1.5px solid var(--court);border-radius:var(--radius);padding:16px}
+  .panel h2{font-size:1rem;font-weight:700;color:var(--court-deep);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .panel h2::before{content:"";width:10px;height:10px;background:var(--shuttle);border-radius:50%;border:2px solid var(--court)}
+  .panel + .panel{margin-top:16px}
+
+  label{font-size:.85rem;font-weight:500;display:block;margin-bottom:4px}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;padding:8px 10px;border:1.5px solid #C9D4CE;border-radius:6px;
+    font:inherit;font-size:.95rem;background:#FBFCFA;
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--shuttle);outline-offset:1px;border-color:var(--court)}
+  .row{display:flex;gap:10px}
+  .row > *{flex:1}
+  .field{margin-bottom:12px}
+
+  button{
+    font:inherit;font-weight:700;cursor:pointer;border-radius:8px;
+    padding:9px 14px;border:2px solid var(--court);
+    background:var(--court);color:var(--line);
+    transition:transform .06s ease;
+  }
+  button:active{transform:scale(.97)}
+  button.ghost{background:transparent;color:var(--court)}
+  button.small{padding:4px 10px;font-size:.82rem;font-weight:500}
+  button.warn{border-color:var(--danger);background:transparent;color:var(--danger)}
+  button.big{width:100%;padding:12px;font-size:1.05rem;letter-spacing:.15em}
+  button:focus-visible{outline:3px solid var(--shuttle);outline-offset:2px}
+
+  #playerList{list-style:none;margin-top:6px}
+  #playerList li{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 4px;border-bottom:1px dashed #D7E0DA;font-size:.95rem;
+  }
+  #playerList li .name{flex:1;font-weight:500}
+  #playerList li.off{opacity:.4;text-decoration:line-through}
+  .lvlSel{width:70px;flex:0 0 auto;padding:4px 6px;border:1.5px solid #C9D4CE;border-radius:6px;font:inherit;font-size:.88rem;background:#FBFCFA}
+  .count{font-size:.82rem;color:var(--muted);margin-top:6px}
+
+  .round{background:var(--card);border:1.5px solid var(--court);border-radius:var(--radius);margin-bottom:16px;overflow:hidden}
+  .round-head{background:var(--court);color:var(--line);padding:8px 14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  .round-head span{font-size:.82rem;font-weight:400;opacity:.85}
+  .courts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;padding:14px}
+  .court{
+    border:2px solid var(--court);border-radius:8px;position:relative;
+    background:linear-gradient(180deg,#EAF3EC 0%,#E2EEE6 100%);
+    padding:10px 12px 12px;
+  }
+  .court::after{
+    content:"";position:absolute;left:8%;right:8%;top:50%;height:0;
+    border-top:2px dashed rgba(31,93,68,.35);
+  }
+  .court-label{font-size:.75rem;font-weight:700;color:var(--court-deep);margin-bottom:6px}
+  .team{display:flex;justify-content:space-between;align-items:center;padding:6px 2px;position:relative;z-index:1}
+  .team .players{font-weight:700;font-size:1.02rem}
+  .team .sum{font-size:.75rem;color:var(--muted)}
+  .resting{padding:0 14px 12px;font-size:.9rem;color:var(--muted)}
+  .resting b{color:var(--danger);font-weight:700}
+
+  table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:8px}
+  th,td{padding:6px 8px;text-align:left;border-bottom:1px solid #E2EAE5}
+  th{background:#EAF3EC;font-weight:700;color:var(--court-deep)}
+
+  .hint{font-size:.8rem;color:var(--muted);margin-top:8px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  #results:empty::before{
+    content:"輸入名單與場地數後，按「開始分隊」產生對戰表。";
+    display:block;padding:40px 20px;text-align:center;color:var(--muted);
+    border:2px dashed #C9D4CE;border-radius:var(--radius);
+  }
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;
+    font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .25s;
+  }
+  .toast.show{opacity:1}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#EAF3EC;border:1px solid var(--court);
+    border-radius:20px;padding:3px 10px;font-size:.85rem;margin:3px 4px 3px 0}
+  .chip button{border:none;background:none;color:var(--danger);padding:0;font-weight:700}
+  .chip.avoid{background:#F7ECE8;border-color:var(--danger)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏸 羽球分隊器</h1>
+  <p>自動排點・程度平衡・輪休公平</p>
+</header>
+
+<main>
+  <!-- 左欄：設定 -->
+  <div>
+    <section class="panel">
+      <h2>球員名單</h2>
+      <div class="field">
+        <label for="nameInput">加入球員（可一次貼多個，用逗號、空格或換行分隔）</label>
+        <textarea id="nameInput" rows="2" placeholder="例：小明, 阿華, 大雄"></textarea>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <button id="addBtn" class="ghost" style="flex:0 0 auto">加入名單</button>
+        <span class="count" id="playerCount" style="flex:1;text-align:right"></span>
+      </div>
+      <ul id="playerList"></ul>
+      <p class="hint">程度採 4–12 級（數字越大越強）；點名字可暫時停用（今天沒來）。新加入的球員預設 7 級。</p>
+    </section>
+
+    <section class="panel">
+      <h2>配對規則</h2>
+      <div class="row field">
+        <select id="ruleA"></select>
+        <select id="ruleType" style="flex:0 0 auto;width:auto">
+          <option value="fixed">固定同隊</option>
+          <option value="avoid">不要同隊</option>
+        </select>
+        <select id="ruleB"></select>
+      </div>
+      <button id="addRule" class="ghost small">加入規則</button>
+      <div id="ruleChips" style="margin-top:8px"></div>
+      <p class="hint">「固定同隊」的兩人會一起上場、一起休息；「不要同隊」的兩人可以當對手，但不會當隊友。</p>
+    </section>
+
+    <section class="panel">
+      <h2>常用名單</h2>
+      <div class="row field">
+        <input type="text" id="rosterName" placeholder="名單名稱，例：週三團">
+        <button id="saveRoster" class="ghost" style="flex:0 0 auto">儲存</button>
+      </div>
+      <div id="rosterChips"></div>
+      <p class="hint" id="storageHint"></p>
+    </section>
+
+    <section class="panel">
+      <h2>分隊設定</h2>
+      <div class="row field">
+        <div>
+          <label for="courtNum">場地數</label>
+          <input type="number" id="courtNum" min="1" max="10" value="2">
+        </div>
+        <div>
+          <label for="roundNum">回合數</label>
+          <input type="number" id="roundNum" min="1" max="30" value="8">
+        </div>
+      </div>
+      <div class="field">
+        <label for="mode">配隊方式</label>
+        <select id="mode">
+          <option value="balance">程度平衡（兩隊實力接近）</option>
+          <option value="mix">強弱搭配（高手帶新手）</option>
+          <option value="random">完全隨機</option>
+        </select>
+      </div>
+      <button id="genBtn" class="big">開始分隊</button>
+    </section>
+  </div>
+
+  <!-- 右欄：結果 -->
+  <div>
+    <div class="toolbar">
+      <button id="regenBtn" class="ghost small" hidden>換一組（重新洗牌）</button>
+      <button id="statsBtn" class="ghost small" hidden>顯示／隱藏 上場統計</button>
+    </div>
+    <section class="panel" id="statsPanel" hidden>
+      <h2>上場統計</h2>
+      <div id="statsTable"></div>
+    </section>
+    <div id="results"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ---------- 狀態 ---------- */
+let players = [];            // {name, level, active}
+let rules = [];              // {a, b, type:'fixed'|'avoid'}
+let lastSchedule = null;
+const $ = id => document.getElementById(id);
+const pairKey = (a,b)=> a<b ? a+'|'+b : b+'|'+a;
+
+/* ---------- localStorage（GitHub Pages 上可正常運作） ---------- */
+const store = {
+  ok: false,
+  init(){
+    try{
+      localStorage.setItem('__t','1'); localStorage.removeItem('__t');
+      this.ok = true;
+    }catch(e){ this.ok = false; }
+    $('storageHint').textContent = this.ok
+      ? '名單與規則會儲存在這台裝置的瀏覽器裡。'
+      : '⚠ 此環境無法永久儲存（預覽模式），部署到 GitHub Pages 後即可正常儲存。';
+  },
+  load(key, fallback){
+    if(!this.ok) return fallback;
+    try{ return JSON.parse(localStorage.getItem(key)) ?? fallback; }catch(e){ return fallback; }
+  },
+  save(key, val){
+    if(!this.ok) return;
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+};
+store.init();
+
+/* ---------- 名單 UI ---------- */
+function renderPlayers(){
+  const ul = $('playerList'); ul.innerHTML = '';
+  players.forEach((p,i)=>{
+    const li = document.createElement('li');
+    if(!p.active) li.classList.add('off');
+    const name = document.createElement('span');
+    name.className='name'; name.textContent=p.name; name.title='點擊切換 出席／缺席';
+    name.style.cursor='pointer';
+    name.onclick = ()=>{ p.active=!p.active; renderPlayers(); persistCurrent(); };
+    const lvl = document.createElement('select'); lvl.className='lvlSel';
+    lvl.setAttribute('aria-label', p.name+' 程度分級');
+    for(let s=4;s<=12;s++){
+      const o=document.createElement('option');
+      o.value=s; o.textContent=s+'級';
+      lvl.appendChild(o);
+    }
+    lvl.value = p.level;
+    lvl.onchange = ()=>{ p.level = +lvl.value; persistCurrent(); };
+    const del=document.createElement('button');
+    del.className='small warn'; del.textContent='刪';
+    del.onclick=()=>{
+      const gone = players[i].name;
+      players.splice(i,1);
+      rules = rules.filter(r=>r.a!==gone && r.b!==gone);
+      renderPlayers(); renderRules(); persistCurrent();
+    };
+    li.append(name,lvl,del); ul.appendChild(li);
+  });
+  const act = players.filter(p=>p.active).length;
+  $('playerCount').textContent = players.length ? '共 '+players.length+' 人，出席 '+act+' 人' : '';
+  refreshRuleSelects();
+}
+
+function refreshRuleSelects(){
+  ['ruleA','ruleB'].forEach(id=>{
+    const sel = $(id);
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">選擇球員</option>' +
+      players.map(p=>'<option value="'+p.name.replace(/"/g,'&quot;')+'">'+p.name+'</option>').join('');
+    if([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+  });
+}
+
+$('addBtn').onclick = ()=>{
+  const raw = $('nameInput').value.trim();
+  if(!raw) return;
+  const names = raw.split(/[,，、\s\n]+/).filter(Boolean);
+  let added = 0;
+  names.forEach(n=>{
+    if(!players.some(p=>p.name===n)){ players.push({name:n, level:7, active:true}); added++; }
+  });
+  $('nameInput').value='';
+  renderPlayers(); persistCurrent();
+  if(added) toast('已加入 '+added+' 人');
+};
+$('nameInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('addBtn').click(); }
+});
+
+/* ---------- 配對規則 ---------- */
+function renderRules(){
+  const box = $('ruleChips'); box.innerHTML='';
+  if(!rules.length){ box.innerHTML='<span class="hint">尚無規則。</span>'; return; }
+  rules.forEach((r,i)=>{
+    const chip=document.createElement('span');
+    chip.className='chip'+(r.type==='avoid'?' avoid':'');
+    const txt=document.createElement('span');
+    txt.textContent = r.a + (r.type==='fixed'?' 🤝 ':' 🚫 ') + r.b;
+    const x=document.createElement('button'); x.textContent='×'; x.title='刪除規則';
+    x.onclick=()=>{ rules.splice(i,1); renderRules(); persistCurrent(); };
+    chip.append(txt,x); box.appendChild(chip);
+  });
+}
+$('addRule').onclick = ()=>{
+  const a=$('ruleA').value, b=$('ruleB').value, type=$('ruleType').value;
+  if(!a || !b) return toast('請選擇兩位球員');
+  if(a===b) return toast('不能選同一個人');
+  if(rules.some(r=>pairKey(r.a,r.b)===pairKey(a,b))) return toast('這兩人已有規則，請先刪除舊規則');
+  if(type==='fixed'){
+    const taken = rules.find(r=>r.type==='fixed' && (r.a===a||r.b===a||r.a===b||r.b===b));
+    if(taken) return toast('固定搭檔一人只能有一組（'+taken.a+' 已和 '+taken.b+' 固定）');
+  }
+  rules.push({a,b,type});
+  renderRules(); persistCurrent();
+};
+
+/* 記住目前名單與規則 */
+function persistCurrent(){ store.save('bp_current', {v:2, players, rules}); }
+const starToLevel = l => Math.min(12, 4+(l-1)*2);   // 舊 1–5 星 → 4–12 級（一次性換算）
+const clampLevel  = l => Math.max(4, Math.min(12, Math.round(+l)||7));
+(function loadCurrent(){
+  const cur = store.load('bp_current', null);
+  let isOld = false;
+  if(Array.isArray(cur)){ players = cur; isOld = true; }            // 最舊格式
+  else if(cur){ players = cur.players||[]; rules = cur.rules||[]; isOld = cur.v!==2; }
+  players.forEach(p=>p.level = isOld ? starToLevel(p.level) : clampLevel(p.level));
+})();
+renderPlayers(); renderRules();
+
+/* ---------- 常用名單 ---------- */
+function renderRosters(){
+  const box = $('rosterChips'); box.innerHTML='';
+  const rosters = store.load('bp_rosters', {});
+  const keys = Object.keys(rosters);
+  if(!keys.length){ box.innerHTML = '<span class="hint">尚未儲存任何名單。</span>'; return; }
+  keys.forEach(k=>{
+    const chip=document.createElement('span'); chip.className='chip';
+    const load=document.createElement('a');
+    load.textContent=k; load.href='javascript:void(0)'; load.style.color='var(--court-deep)';
+    load.onclick=()=>{
+      const r = rosters[k];
+      let isOld = false;
+      if(Array.isArray(r)){ players = r.map(p=>({...p})); rules = []; isOld = true; }  // 舊版格式相容
+      else { players = (r.players||[]).map(p=>({...p})); rules = (r.rules||[]).map(x=>({...x})); isOld = r.v!==2; }
+      players.forEach(p=>p.level = isOld ? starToLevel(p.level) : clampLevel(p.level));
+      renderPlayers(); renderRules(); persistCurrent(); toast('已載入「'+k+'」');
+    };
+    const x=document.createElement('button'); x.textContent='×'; x.title='刪除此名單';
+    x.onclick=()=>{ if(confirm('刪除名單「'+k+'」？')){ delete rosters[k]; store.save('bp_rosters',rosters); renderRosters(); } };
+    chip.append(load,x); box.appendChild(chip);
+  });
+}
+$('saveRoster').onclick = ()=>{
+  const name = $('rosterName').value.trim();
+  if(!name) return toast('請先輸入名單名稱');
+  if(!players.length) return toast('名單是空的');
+  const rosters = store.load('bp_rosters', {});
+  rosters[name] = { v:2, players: players.map(p=>({...p})), rules: rules.map(r=>({...r})) };
+  store.save('bp_rosters', rosters);
+  $('rosterName').value='';
+  renderRosters(); toast('已儲存「'+name+'」（含規則）');
+};
+renderRosters();
+
+/* ---------- 分隊演算法 ---------- */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function generateSchedule(roster, courts, rounds, mode, ruleList){
+  const st = roster.map(p=>({ ...p, games:0, rest:0, restStreak:0, partners:{}, lastPartner:null }));
+  const byName = Object.fromEntries(st.map(p=>[p.name,p]));
+
+  // 只採用兩人都出席的規則
+  const fixedOf = {};
+  const avoidSet = new Set();
+  ruleList.forEach(r=>{
+    if(!byName[r.a] || !byName[r.b]) return;
+    if(r.type==='fixed'){ fixedOf[r.a]=r.b; fixedOf[r.b]=r.a; }
+    else avoidSet.add(pairKey(r.a,r.b));
+  });
+  const isAvoid=(x,y)=>avoidSet.has(pairKey(x.name,y.name));
+  const isFixed=(x,y)=>fixedOf[x.name]===y.name;
+
+  // 固定搭檔視為一個單位（一起上場、一起休息）
+  const units = [];
+  {
+    const seen = new Set();
+    st.forEach(p=>{
+      if(seen.has(p.name)) return;
+      const mate = fixedOf[p.name];
+      if(mate && byName[mate] && !seen.has(mate)){
+        units.push([p, byName[mate]]); seen.add(p.name); seen.add(mate);
+      } else { units.push([p]); seen.add(p.name); }
+    });
+  }
+
+  const schedule = [];
+  for(let r=0;r<rounds;r++){
+    const capacity = Math.min(courts, Math.floor(st.length/4)) * 4;
+    if(capacity < 4) return null;
+
+    // 1) 依公平性排序單位：連休越久、上場越少越優先
+    const pool = shuffle([...units]).sort((u1,u2)=>{
+      const rs = u=>Math.max(...u.map(p=>p.restStreak));
+      const g  = u=>Math.min(...u.map(p=>p.games));
+      return (rs(u2)-rs(u1)) || (g(u1)-g(u2));
+    });
+
+    // 2) 依序取單位填滿上場名額
+    let playingUnits=[], filled=0;
+    const skipped=[];
+    pool.forEach(u=>{
+      if(filled + u.length <= capacity){ playingUnits.push(u); filled += u.length; }
+      else skipped.push(u);
+    });
+    // 若被固定搭檔卡住湊不成 4 的倍數，就少上一些人
+    while(filled % 4 !== 0 && playingUnits.length){
+      const idx = playingUnits.map(u=>u.length).lastIndexOf(1);
+      const u = idx>=0 ? playingUnits.splice(idx,1)[0] : playingUnits.pop();
+      filled -= u.length; skipped.unshift(u);
+    }
+    if(filled < 4) return null;
+    const usedCourts = filled/4;
+
+    // 3) 單位分到各場：先放固定搭檔，再蛇形分配散將，讓各場總程度接近
+    let orderedUnits = [...playingUnits];
+    if(mode !== 'random'){
+      orderedUnits.sort((u1,u2)=>{
+        const avg = u=>u.reduce((s,p)=>s+p.level,0)/u.length;
+        return (u2.length-u1.length) || (avg(u2)-avg(u1));   // 先大單位，再高程度
+      });
+    } else {
+      orderedUnits.sort((u1,u2)=>u2.length-u1.length);        // 隨機模式也要先放大單位以免卡位
+    }
+    const groups = Array.from({length:usedCourts},()=>[]);
+    let idx=0, dir=1;
+    orderedUnits.forEach(u=>{
+      // 蛇形前進，跳過放不下的場
+      let tries=0;
+      while(groups[idx].length + u.length > 4 && tries < usedCourts*2){
+        idx+=dir;
+        if(idx>=usedCourts){ idx=usedCourts-1; dir=-1; }
+        else if(idx<0){ idx=0; dir=1; }
+        tries++;
+      }
+      let target = groups[idx];
+      if(target.length + u.length > 4) target = groups.find(g=>g.length+u.length<=4);
+      target.push(...u);
+      idx+=dir;
+      if(idx>=usedCourts){ idx=usedCourts-1; dir=-1; }
+      else if(idx<0){ idx=0; dir=1; }
+    });
+
+    // 3.5) 檢查每場是否存在合法拆法（固定＋互斥可能同場衝突），不行就跟別場換人
+    const hardOK = g => {
+      const splits=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
+      return splits.some(([t1,t2])=>{
+        const A=[g[t1[0]],g[t1[1]]], B=[g[t2[0]],g[t2[1]]];
+        if(isAvoid(A[0],A[1])||isAvoid(B[0],B[1])) return false;
+        const sf=(T,o)=>T.some(p=>{ const m=fixedOf[p.name]; return m && o.some(q=>q.name===m); });
+        return !(sf(A,B)||sf(B,A));
+      });
+    };
+    for(let gi=0; gi<groups.length; gi++){
+      if(hardOK(groups[gi])) continue;
+      outer:
+      for(let gj=0; gj<groups.length; gj++){
+        if(gj===gi) continue;
+        for(let a=0;a<4;a++) for(let b=0;b<4;b++){
+          const pa=groups[gi][a], pb=groups[gj][b];
+          if(fixedOf[pa.name]||fixedOf[pb.name]) continue;  // 固定搭檔不拆場
+          [groups[gi][a],groups[gj][b]]=[pb,pa];
+          if(hardOK(groups[gi]) && hardOK(groups[gj])) break outer;
+          [groups[gi][a],groups[gj][b]]=[pa,pb];
+        }
+      }
+    }
+
+    // 4) 每場 4 人拆成兩隊（遵守規則、避免連續同隊）
+    const courtsOut = groups.map(g=>{
+      const splits = [ [[0,1],[2,3]], [[0,2],[1,3]], [[0,3],[1,2]] ];
+      let best=null, bestScore=Infinity;
+      shuffle(splits).forEach(([t1,t2])=>{
+        const A=[g[t1[0]],g[t1[1]]], B=[g[t2[0]],g[t2[1]]];
+        let score = 0;
+        // 硬性規則
+        if(isAvoid(A[0],A[1]) || isAvoid(B[0],B[1])) score += 100000;      // 不要同隊
+        const splitFixed = (T,other) => T.some(p=>{
+          const m = fixedOf[p.name];
+          return m && other.some(q=>q.name===m);
+        });
+        if(splitFixed(A,B) || splitFixed(B,A)) score += 150000;             // 固定搭檔被拆開
+        // 盡量不要連續兩回合同隊（固定搭檔除外）
+        if(!isFixed(A[0],A[1]) && A[0].lastPartner===A[1].name) score += 2000;
+        if(!isFixed(B[0],B[1]) && B[0].lastPartner===B[1].name) score += 2000;
+        // 減少重複搭檔次數
+        score += ((A[0].partners[A[1].name]||0) + (B[0].partners[B[1].name]||0)) * 10;
+        // 程度配隊
+        const diff = Math.abs(A[0].level+A[1].level - B[0].level-B[1].level);
+        if(mode==='random') score += Math.random();
+        else if(mode==='mix'){
+          const spread = Math.abs(A[0].level-A[1].level) + Math.abs(B[0].level-B[1].level);
+          score += diff*100 - spread;
+        } else {
+          score += diff*100;
+        }
+        if(score<bestScore){ bestScore=score; best=[A,B]; }
+      });
+      return best;
+    });
+
+    // 5) 更新狀態
+    const playingNames = new Set(playingUnits.flat().map(p=>p.name));
+    st.forEach(p=>{
+      if(playingNames.has(p.name)){ p.games++; p.restStreak=0; }
+      else { p.rest++; p.restStreak++; p.lastPartner=null; }   // 休息過就不算「連續」
+    });
+    courtsOut.forEach(([A,B])=>{
+      const mark=(x,y)=>{
+        x.partners[y.name]=(x.partners[y.name]||0)+1;
+        y.partners[x.name]=(y.partners[x.name]||0)+1;
+        x.lastPartner=y.name; y.lastPartner=x.name;
+      };
+      mark(A[0],A[1]); mark(B[0],B[1]);
+    });
+
+    const restingPlayers = skipped.flat();
+    schedule.push({ courts:courtsOut, resting: restingPlayers.map(p=>({name:p.name, streak:p.restStreak})) });
+  }
+  return { schedule, stats: st };
+}
+
+/* ---------- 產生與顯示 ---------- */
+function run(){
+  const roster = players.filter(p=>p.active);
+  if(roster.length < 4) return toast('至少需要 4 位出席球員');
+  const courts = Math.max(1, +$('courtNum').value||1);
+  const rounds = Math.max(1, +$('roundNum').value||1);
+  const mode = $('mode').value;
+
+  const result = generateSchedule(roster, courts, rounds, mode, rules);
+  if(!result) return toast('人數不足以開一個場');
+  lastSchedule = result;
+  renderResults(result, mode);
+  $('regenBtn').hidden = false;
+  $('statsBtn').hidden = false;
+}
+$('genBtn').onclick = run;
+$('regenBtn').onclick = run;
+$('statsBtn').onclick = ()=>{ $('statsPanel').hidden = !$('statsPanel').hidden; };
+
+function renderResults({schedule, stats}, mode){
+  const box = $('results'); box.innerHTML='';
+  schedule.forEach((rd,i)=>{
+    const sec=document.createElement('section'); sec.className='round';
+    const head=document.createElement('div'); head.className='round-head';
+    head.innerHTML = '第 '+(i+1)+' 回合 <span>'+rd.courts.length+' 個場地</span>';
+    sec.appendChild(head);
+
+    const cts=document.createElement('div'); cts.className='courts';
+    rd.courts.forEach(([A,B],ci)=>{
+      const c=document.createElement('div'); c.className='court';
+      const sum = t=>t[0].level+t[1].level;
+      c.innerHTML =
+        '<div class="court-label">第 '+(ci+1)+' 場</div>'+
+        '<div class="team"><span class="players">'+A[0].name+'／'+A[1].name+'</span><span class="sum">合計 '+sum(A)+'</span></div>'+
+        '<div class="team"><span class="players">'+B[0].name+'／'+B[1].name+'</span><span class="sum">合計 '+sum(B)+'</span></div>';
+      cts.appendChild(c);
+    });
+    sec.appendChild(cts);
+
+    if(rd.resting.length){
+      const rest=document.createElement('div'); rest.className='resting';
+      rest.innerHTML = '休息：' + rd.resting.map(p=>
+        p.streak>=2 ? '<b>'+p.name+'（連休'+p.streak+'）</b>' : p.name
+      ).join('、');
+      sec.appendChild(rest);
+    }
+    box.appendChild(sec);
+  });
+
+  const sorted=[...stats].sort((a,b)=>b.games-a.games);
+  $('statsTable').innerHTML = '<table>'+
+    '<tr><th>球員</th><th>程度</th><th>上場</th><th>休息</th></tr>'+
+    sorted.map(p=>'<tr><td>'+p.name+'</td><td>'+p.level+'級</td><td>'+p.games+'</td><td>'+p.rest+'</td></tr>').join('')+
+    '</table>';
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+</script>
+</body>
+</html>
